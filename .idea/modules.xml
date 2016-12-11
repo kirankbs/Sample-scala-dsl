@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/Sample-scala-dsl.iml" filepath="$PROJECT_DIR$/.idea/modules/Sample-scala-dsl.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/Sample-scala-dsl_main.iml" filepath="$PROJECT_DIR$/.idea/modules/Sample-scala-dsl_main.iml" group="Sample-scala-dsl" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/Sample-scala-dsl_test.iml" filepath="$PROJECT_DIR$/.idea/modules/Sample-scala-dsl_test.iml" group="Sample-scala-dsl" />
+    </modules>
+  </component>
+</project>
