@@ -30,7 +30,7 @@ class LexerTest {
   @Test
   def itShouldGenerateListOfTokensWhenInputStartsWithIdentifier(): Unit ={
     //given
-    val code = "xyz read input name, country\nswitch:\n  country == \"PT\" ->\n    call service \"A\"\n    exit\n  otherwise ->\n    call service \"B\"\n    switch:\n      name == \"unknown\" ->\n        exit\n      otherwise ->\n        call service \"C\"\n        exit"
+    val code = "read input name, country\nswitch:\n  country == \"PT\" ->\n    call service \"A\"\n    exit\n  otherwise ->\n    call service \"B\"\n    switch:\n      name == \"unknown\" ->\n        exit\n      otherwise ->\n        call service \"C\"\n        exit"
     //when
     val actual = WorkflowLexer(code)
     //then

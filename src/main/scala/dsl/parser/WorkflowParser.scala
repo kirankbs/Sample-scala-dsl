@@ -1,5 +1,6 @@
 package dsl.parser
 
+import dsl.compiler.{Location, WorkflowParserError}
 import dsl.token._
 
 import scala.util.parsing.combinator.Parsers
@@ -12,50 +13,58 @@ object WorkflowParser extends Parsers{
 
   override type Elem = WorkflowToken
 
-  private def identifier: Parser[IDENTIFIER] = {
+  private def identifier: Parser[IDENTIFIER] = positioned {
     accept("identifier", { case id @ IDENTIFIER(name) => id})
   }
 
-  private def literal: Parser[LITERAL] = {
-    accept("string literal", { case lit @ LITERAL(name) => lit})
+  private def literal: Parser[LITERAL] = positioned {
+    accept("string literal", { case lit: LITERAL => lit})
   }
 
-  def condition: Parser[Equals] = {
-    (identifier ~ EQUALS ~ literal) ^^ { case id ~ eq ~ lit => Equals(id.str, lit.str) }
+  def condition: Parser[Equals] = positioned {
+    (identifier ~ EQUALS() ~ literal) ^^ { case id ~ eq ~ lit => Equals(id.str, lit.str) }
   }
 
 
-  def program: Parser[WorkflowAST] = {
+  def program: Parser[WorkflowAST] = positioned {
     phrase(block)
   }
 
-  def block: Parser[WorkflowAST] = {
+  def block: Parser[WorkflowAST] = positioned {
     rep1(statement) ^^ { case stmtList => stmtList reduceRight AndThen }
   }
 
-  def statement: Parser[WorkflowAST] = {
-    val exit = EXIT ^^ (_ => Exit)
-    val readInput = READINPUT ~ rep(identifier ~ COMMA) ~ identifier ^^ {
+  def statement: Parser[WorkflowAST] = positioned {
+    val exit = EXIT() ^^ (_ => Exit)
+    val readInput = READINPUT() ~ rep(identifier ~ COMMA()) ~ identifier ^^ {
       case read ~ inputs ~ IDENTIFIER(lastInput) => ReadInput(inputs.map(_._1.str) ++ List(lastInput))
     }
-    val callService = CALLSERVICE ~ literal ^^ {
+    val callService = CALLSERVICE() ~ literal ^^ {
       case call ~ LITERAL(serviceName) => CallService(serviceName)
     }
-    val switch = SWITCH ~ COLON ~ INDENT ~ rep1(ifThen) ~ opt(otherwiseThen) ~ DEDENT ^^ {
+    val switch = SWITCH() ~ COLON() ~ INDENT() ~ rep1(ifThen) ~ opt(otherwiseThen) ~ DEDENT() ^^ {
       case _ ~ _ ~ _ ~ ifs ~ otherwise ~ _ => Choice(ifs ++ otherwise)
     }
     exit | readInput | callService | switch
   }
 
-  def ifThen: Parser[IfThen] = {
-    (condition ~ ARROW ~ INDENT ~ block ~ DEDENT) ^^ {
+  def ifThen: Parser[IfThen] = positioned {
+    (condition ~ ARROW() ~ INDENT() ~ block ~ DEDENT()) ^^ {
       case cond ~ _ ~ _ ~ block ~ _ => IfThen(cond, block)
     }
   }
 
-  def otherwiseThen: Parser[OtherwiseThen] = {
-    (OTHERWISE ~ ARROW ~ INDENT ~ block ~ DEDENT) ^^ {
+  def otherwiseThen: Parser[OtherwiseThen] = positioned {
+    (OTHERWISE() ~ ARROW() ~ INDENT() ~ block ~ DEDENT()) ^^ {
       case _ ~ _ ~ _ ~ block ~ _ => OtherwiseThen(block)
+    }
+  }
+
+  def apply(tokens: Seq[WorkflowToken]): Either[WorkflowParserError, WorkflowAST] = {
+    val reader = new WorkflowTokenReader(tokens)
+    program(reader) match {
+      case NoSuccess(msg, next) => Left(WorkflowParserError(Location(next.pos.line,next.pos.column),msg))
+      case Success(result, next) => Right(result)
     }
   }
 
@@ -67,7 +76,7 @@ class WorkflowTokenReader(tokens: Seq[WorkflowToken]) extends Reader[WorkflowTok
 
   override def rest: Reader[WorkflowToken] = new WorkflowTokenReader(tokens.tail)
 
-  override def pos: Position = NoPosition
+  override def pos: Position = tokens.headOption.map(_.pos).getOrElse(NoPosition)
 
   override def atEnd: Boolean = tokens.isEmpty
 }
